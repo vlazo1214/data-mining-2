@@ -19,17 +19,19 @@ output:
     latex_engine: lualatex
   header-includes:
   - \usepackage{bm}
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 # Note
 
-In order to generate the corresponding pdf file, 
-you may need the following \verb|library| to manage
-some of the conflicting packages in this entire program,
-\url{https://conflicted.r-lib.org/}.
-In addition, you may need to update many of the required
-packages to generate the corresponding pdf file. 
-HTML and Word file should be generated more easily. 
+In order to generate the corresponding pdf file, you may need the
+following \verb|library| to manage some of the conflicting packages in
+this entire program, \url{https://conflicted.r-lib.org/}. In addition,
+you may need to update many of the required packages to generate the
+corresponding pdf file. HTML and Word file should be generated more
+easily.
 
 ```{r}
 # Note
@@ -38,23 +40,21 @@ library(conflicted)
 
 # About the Data and Case Study
 
-In this Case Study,
-we will examine the \verb|Credit| dataset from ISLR R package. 
-This dataset has a lot of predictors, some of which are 
-categorical (factor), and is a perfect illustration of 
-feature selection by stepwise selection and regularization. 
+In this Case Study, we will examine the \verb|Credit| dataset from ISLR
+R package. This dataset has a lot of predictors, some of which are
+categorical (factor), and is a perfect illustration of feature selection
+by stepwise selection and regularization.
 
-You may have already seen the Credit data when taking other courses,
-but our treatment here will have a much heavier Data Mining
-flavor and will be structured in a way that you will be working
-on each step of Model Building Process on this realistic dataset.
+You may have already seen the Credit data when taking other courses, but
+our treatment here will have a much heavier Data Mining flavor and will
+be structured in a way that you will be working on each step of Model
+Building Process on this realistic dataset.
 
 This *Case Study* is to identify and interpret key factors that relate
 to a higher or lower Balance with the aid of appropriate linear models.
 The scope of this *Case Study* is strictly to illustrate the fundamental
-tools of *Data Mining* and for *Linear Models*.
-The linear model considered is 
-\begin{align}
+tools of *Data Mining* and for *Linear Models*. The linear model
+considered is \begin{align}
 \label{eqn:MLR1}
 Y 
 & = 
@@ -71,10 +71,8 @@ Y
 \epsilon. 
 \end{align}
 
-First of all, 
-let's first read in the dataset, 
-delete the first column containing row only indices, 
-and print a summary of each variable.
+First of all, let's first read in the dataset, delete the first column
+containing row only indices, and print a summary of each variable.
 
 ```{r}
 # Uncomment the next line the first time you use ISLR
@@ -88,8 +86,8 @@ Credit$ID <- NULL
 summary(Credit)
 ```
 
-The dataset should have $n = 400$ observations and 11 variables.
-To know about the variables, run the fullowing line. 
+The dataset should have $n = 400$ observations and 11 variables. To know
+about the variables, run the fullowing line.
 
 ```{r}
 help(Credit)
@@ -97,50 +95,39 @@ dim(Credit)
 names(Credit)
 ```
 
-Numeric predictors are listed first, followed by categorical ones. 
-The target variable is the last variable in the dataset, \verb|Balance|,
-an integer-valued variable that ranges from O to 1,999 and 
-represents the credit card balance (in\$) for an individual. 
-The other variables describe the financial and demographic 
-factors of an individual and can be grouped as follows:
+Numeric predictors are listed first, followed by categorical ones. The
+target variable is the last variable in the dataset, \verb|Balance|, an
+integer-valued variable that ranges from O to 1,999 and represents the
+credit card balance (in\$) for an individual. The other variables
+describe the financial and demographic factors of an individual and can
+be grouped as follows:
 
+- The first six variables, \verb|Income|, \verb|Limit|, \verb|Rating|,
+  \verb|Cards|, \verb|Age|, and \verb|Education|, are numeric predictors
+  for \verb|Balance|.
 
-* The first six variables, 
-\verb|Income|, 
-\verb|Limit|, 
-\verb|Rating|, 
-\verb|Cards|, 
-\verb|Age|, and 
-\verb|Education|, are numeric predictors for 
-\verb|Balance|.
-
-* The other four variables, 
-\verb|Gender|,
-\verb|Student|, 
-\verb|Married|, and 
-\verb|Ethnicity|, are categorical predictors. 
-The first three variables are binary and 
-\verb|Ethnicity| has three levels.
+- The other four variables, \verb|Gender|, \verb|Student|,
+  \verb|Married|, and \verb|Ethnicity|, are categorical predictors. The
+  first three variables are binary and \verb|Ethnicity| has three
+  levels.
 
 # Exercise 1
 
-Is there any variable with ethical concerns? 
+Is there any variable with ethical concerns?
 
-Well, \verb|Ethnicity| variable could be of 
-potential concern which could raise the issues 
-of discrimination and legal concerns. 
+Well, \verb|Ethnicity| variable could be of potential concern which
+could raise the issues of discrimination and legal concerns.
 
 # Exercise 2
 
-In this exercise, let's do some EDA. 
+In this exercise, let's do some EDA.
 
 ## Target Variable
 
-How does the distribution of target variable look like? 
-Based on your observation, what transformation would be 
-suitable for Balance in order to fit a linear model? 
-Remember that for linear regression model, the target
-variable should be approximately normally distributed. 
+How does the distribution of target variable look like? Based on your
+observation, what transformation would be suitable for Balance in order
+to fit a linear model? Remember that for linear regression model, the
+target variable should be approximately normally distributed.
 
 ```{r}
 summary(Credit$Balance)
@@ -152,22 +139,20 @@ ggplot(Credit , aes(x = Balance)) +
 
 nrow(Credit [Credit$Balance == 0, ])
 ```
-We observed that the median, mean, and maximum of 
-Balance are 459.50, 520.01, and 1,999, respectively. 
-Since mean exceeds the median, then the distribution
-of Balance is skewed to the right 
-(although the skewness does not seem severe). 
-This is also confirmed by the histogram of Balance provided. 
 
-Since the distribution is positively skewed, 
-it would be ideal to use log-transformation to the data. 
-However, there are a large number of observations 
-(90 to be exact) for which Balance equals zero. 
-This makes the log-transformation problematic 
-and so we will leave Balance as is. 
-Given the log-transformation is not suitable,
-the other possible skewness correction transformation 
-would be to use the square-root transformation. 
+We observed that the median, mean, and maximum of Balance are 459.50,
+520.01, and 1,999, respectively. Since mean exceeds the median, then the
+distribution of Balance is skewed to the right (although the skewness
+does not seem severe). This is also confirmed by the histogram of
+Balance provided.
+
+Since the distribution is positively skewed, it would be ideal to use
+log-transformation to the data. However, there are a large number of
+observations (90 to be exact) for which Balance equals zero. This makes
+the log-transformation problematic and so we will leave Balance as is.
+Given the log-transformation is not suitable, the other possible
+skewness correction transformation would be to use the square-root
+transformation.
 
 ```{r}
 ggplot(Credit , aes(x = sqrt(Balance))) +
@@ -176,7 +161,7 @@ ggplot(Credit , aes(x = sqrt(Balance))) +
 
 ## Investigating Numeric Predictors -- Bivariate Data Exploration
 
-Report the correlation matrix of the numeric predictors. 
+Report the correlation matrix of the numeric predictors.
 
 ```{r}
 # Calculate the correlation matrix for numeric variables
@@ -185,50 +170,49 @@ cor.matrix <- cor(Credit[, c(1:6, 11)])
 print("Correlation Matrix")
 round(cor.matrix, digits = 4)
 ```
-* Predictive Variables of Balance: 
-Limit and Rating with high correlation to Balance. 
-Income variable has moderate effect with Balance. 
-The rest of the numeric variables, e.g., Age, Education, etc.,
-have very weak effect on the target variable, Balance.
 
-* Correlations Between Predictors: 
-Note the following correlations.
+- Predictive Variables of Balance: Limit and Rating with high
+  correlation to Balance. Income variable has moderate effect with
+  Balance. The rest of the numeric variables, e.g., Age, Education,
+  etc., have very weak effect on the target variable, Balance.
 
-  + Between Income and Limit (0.7921)
-  + Between Income and Rating (0.7914)
-  + Between Limit and Rating (0.9969)
+- Correlations Between Predictors: Note the following correlations.
 
-These large correlations can be of concern as they 
-suggest duplication of information contained
-in the three variables and may complicate 
-the interpretation of the regression coefficients.
-The last correlation is most alarming, indicating 
-that Limit and Rating are almost positively collinear.
+  - Between Income and Limit (0.7921)
+  - Between Income and Rating (0.7914)
+  - Between Limit and Rating (0.9969)
+
+These large correlations can be of concern as they suggest duplication
+of information contained in the three variables and may complicate the
+interpretation of the regression coefficients. The last correlation is
+most alarming, indicating that Limit and Rating are almost positively
+collinear.
 
 ```{r}
 ggplot(Credit, aes(x = Limit, y = Rating)) + 
   geom_point()
 ```
+
 The scatterplot above reveals that the two variables (Limit and Rating)
-are virtually perfectly related in a linear fashion and do not contribute
-much information when the other variable is present.
-Therefore, we will keep one and only one of the two predictors,
-say Rating, and delete Limit. 
-This can be justified by the slightly higher correlation 
-between Rating and Balance as seen in the correlation matrix above. 
+are virtually perfectly related in a linear fashion and do not
+contribute much information when the other variable is present.
+Therefore, we will keep one and only one of the two predictors, say
+Rating, and delete Limit. This can be justified by the slightly higher
+correlation between Rating and Balance as seen in the correlation matrix
+above.
 
 ```{r}
 # Delete Limit
 Credit$Limit <- NULL
 ```
 
-## Visualization 
+## Visualization
 
-Create visual representations between the numeric variables and
-the target variable to identify variables most likely to predict 
-the target.
+Create visual representations between the numeric variables and the
+target variable to identify variables most likely to predict the target.
 
-Scatterplots between numeric variables and target variable is shown below. 
+Scatterplots between numeric variables and target variable is shown
+below.
 
 ```{r}
 # first save the names of the numeric predictors as a vector
@@ -244,26 +228,23 @@ for (i in vars.numeric) {
 
 # Exercise 3
 
-Here we explore the factor variables. 
-Identify a factor variable that is more
-likely to predict the target variable. 
+Here we explore the factor variables. Identify a factor variable that is
+more likely to predict the target variable.
 
-* Show key descriptive statistics.
-* Create visual representations (e.g., graphs, charts).
-* Explain why you selected this variable and how the 
-variable relates to the target variable.
-
+- Show key descriptive statistics.
+- Create visual representations (e.g., graphs, charts).
+- Explain why you selected this variable and how the variable relates to
+  the target variable.
 
 Well, there are four categorical predictors,
-\verb|Gender, Student, Married|, and \verb|Ethnicity|,
-and identify one of them which is likely to be predictive. 
-Some preliminary descriptive statistics of these four variables
-can be found in the summary in Exercise 1. 
-For instance, 360 (90%) of the observations 
-are non-students while 40 (10%) of them are students.
+\verb|Gender, Student, Married|, and \verb|Ethnicity|, and identify one
+of them which is likely to be predictive. Some preliminary descriptive
+statistics of these four variables can be found in the summary in
+Exercise 1. For instance, 360 (90%) of the observations are non-students
+while 40 (10%) of them are students.
 
-Let's produce the mean (and median) of \verb|Balance|
-split by different levels of each of the four factor variables.
+Let's produce the mean (and median) of \verb|Balance| split by different
+levels of each of the four factor variables.
 
 ```{r}
 library(tidyverse)
@@ -282,20 +263,17 @@ for (i in vars.categorical) {
 }
 ```
 
-Of the four categorical predictors, 
-only Student stands out as making a significant difference to
-the mean of Balance over the two levels, "Yes" and "No",
-with students (876.8250) having a much higher average Balance 
-than for non-students (480.3694). 
-The mean of Balance is more or less the same across different 
-levels of Gender, Married, and Ethnicity. 
-These three variables appear to be ineffective 
-in differentiating the observations of Balance.
+Of the four categorical predictors, only Student stands out as making a
+significant difference to the mean of Balance over the two levels, "Yes"
+and "No", with students (876.8250) having a much higher average Balance
+than for non-students (480.3694). The mean of Balance is more or less
+the same across different levels of Gender, Married, and Ethnicity.
+These three variables appear to be ineffective in differentiating the
+observations of Balance.
 
-Let's supplement our conclusions above with some
-graphical displays, Split Boxplots. 
-Since Balance is a numeric variable but we are now dealing with 
-categorical predictors, we will make use of split boxplots.
+Let's supplement our conclusions above with some graphical displays,
+Split Boxplots. Since Balance is a numeric variable but we are now
+dealing with categorical predictors, we will make use of split boxplots.
 
 ```{r}
 for (i in vars.categorical) {
@@ -306,22 +284,19 @@ for (i in vars.categorical) {
 }
 ```
 
-As we expect, the box for students is noticeably higher than that
-for non-students, with a similar spread, 
-and the boxes are very similar across different factor levels
-for each of Gender, Married, and Ethnicity. 
-These observations support our earlier findings that 
-Student seems to be the only factor variable with significant predictive power.
+As we expect, the box for students is noticeably higher than that for
+non-students, with a similar spread, and the boxes are very similar
+across different factor levels for each of Gender, Married, and
+Ethnicity. These observations support our earlier findings that Student
+seems to be the only factor variable with significant predictive power.
 
-**Conclusion:** 
-Overall, the most promising predictors for Balance are 
+**Conclusion:** Overall, the most promising predictors for Balance are
 Income (numeric), Rating (numeric), and Student (factor).
 
-# Exercise 4 
+# Exercise 4
 
-Comment about the following two plots. 
-Clearly state your observations and discuss the impact, 
-if any, of each plot on your later modeling.
+Comment about the following two plots. Clearly state your observations
+and discuss the impact, if any, of each plot on your later modeling.
 
 ## A Boxplot of Age by Student
 
@@ -330,27 +305,23 @@ ggplot(Credit, aes(x = Student, y = Age)) +
   geom_boxplot()
 ```
 
-The plot above shows that those who are students
-tend to have a smaller Age (a lower median). 
-This makes intuitive sense as students are more likely to be younger, 
-although the median Age of students, which is close to 50, 
-seems unreasonably high (well, this dataset is simulated!). 
-However, this also means that there is some co-dependence (but not interaction!) 
-between Age and Student, and the effects of these two 
-variables on Balance may be distorted when
-they serve as predictors at the same time. 
-Fortunately, this concern may not be relevant after all, 
-as we have seen in Exercise 2 that Age is unlikely 
-to be an important predictor of Balance.
+The plot above shows that those who are students tend to have a smaller
+Age (a lower median). This makes intuitive sense as students are more
+likely to be younger, although the median Age of students, which is
+close to 50, seems unreasonably high (well, this dataset is simulated!).
+However, this also means that there is some co-dependence (but not
+interaction!) between Age and Student, and the effects of these two
+variables on Balance may be distorted when they serve as predictors at
+the same time. Fortunately, this concern may not be relevant after all,
+as we have seen in Exercise 2 that Age is unlikely to be an important
+predictor of Balance.
 
 ## A Scatterplot of Balance against Income colored by Student
 
-A scatterplot of Balance against Income with the observations 
-colored by Student and with a smoothed line superimposed
-for each level of Student can be created as below.
-This plot highlights the possible interaction between 
-Income and Student in affecting Balance. 
-How?
+A scatterplot of Balance against Income with the observations colored by
+Student and with a smoothed line superimposed for each level of Student
+can be created as below. This plot highlights the possible interaction
+between Income and Student in affecting Balance. How?
 
 ```{r}
 ggplot(Credit, aes(x = Income, y = Balance, color = Student)) +
@@ -358,22 +329,21 @@ ggplot(Credit, aes(x = Income, y = Balance, color = Student)) +
   geom_smooth(method = "lm", se = FALSE)
 ```
 
-Recall that an interaction means that the expected effect of one predictor 
-on the target variable depends on the value or level of another predictor. 
-This is reflected in the scatterplot, where the slopes of the two smoothed 
-lines differ quite remarkably, with the non-students being more sensitive 
-to Income than students perhaps due to their financial status.
-To accommodate the interaction between Income and Student, 
-we will include the interaction variable Income: Student
+Recall that an interaction means that the expected effect of one
+predictor on the target variable depends on the value or level of
+another predictor. This is reflected in the scatterplot, where the
+slopes of the two smoothed lines differ quite remarkably, with the
+non-students being more sensitive to Income than students perhaps due to
+their financial status. To accommodate the interaction between Income
+and Student, we will include the interaction variable Income: Student
 when constructing linear models in later exercises.
 
 # Exercise 5
 
-## Split the data into training and test sets 
+## Split the data into training and test sets
 
-By using \verb|createDataPartition()| function, 
-create the training and testing split. 
-
+By using \verb|createDataPartition()| function, create the training and
+testing split.
 
 ```{r}
 library(caret)
@@ -389,41 +359,40 @@ print("data.test")
 mean(data.test$Balance)
 ```
 
-As seen above, the mean of Balance in the training set is pretty 
-close to that in the test set due to the built-in stratification.
+As seen above, the mean of Balance in the training set is pretty close
+to that in the test set due to the built-in stratification.
 
-## Fitting MLR 
+## Fitting MLR
 
-Now, we fit a multiple linear regression model for Balance 
-on all variables (except Limit) on the training set. 
-Be sure to take note of the implications in Exercise 4. 
-Interpret the coefficient estimates for
+Now, we fit a multiple linear regression model for Balance on all
+variables (except Limit) on the training set. Be sure to take note of
+the implications in Exercise 4. Interpret the coefficient estimates for
 Married and for the Asian level of Ethnicity.
 
 ```{r}
 model.full <- lm(Balance ~ . + Income:Student, data = data.train)
 summary(model.full)
 ```
-The coefficient estimates for the categorical predictors have to 
-be interpreted differently from those for numeric predictors. 
-Taking the estimates for MarriedYes and EthnicityAsian for illustration,
-we can say:
 
-* The credit card balance of married individuals is lower 
-than that of unmarried (baseline) by 20.46469 on average, 
-holding all other predictors fixed.
+The coefficient estimates for the categorical predictors have to be
+interpreted differently from those for numeric predictors. Taking the
+estimates for MarriedYes and EthnicityAsian for illustration, we can
+say:
 
-* The credit card balance of Asians is higher than that 
-of African Americans (baseline) by 6.53269 on average,
-holding all other predictors fixed.
+- The credit card balance of married individuals is lower than that of
+  unmarried (baseline) by 20.46469 on average, holding all other
+  predictors fixed.
+
+- The credit card balance of Asians is higher than that of African
+  Americans (baseline) by 6.53269 on average, holding all other
+  predictors fixed.
 
 ## Relevel the Factor Variables
 
-Relevel the factor variables so that the most frequent 
-level becomes the baseline level (more common practice!) 
-and refit the multiple linear regression model.
-Interpret the coefficient estimates for Married 
-and for the Asian level of Ethnicity again.
+Relevel the factor variables so that the most frequent level becomes the
+baseline level (more common practice!) and refit the multiple linear
+regression model. Interpret the coefficient estimates for Married and
+for the Asian level of Ethnicity again.
 
 ```{r}
 for (i in vars.categorical){
@@ -444,22 +413,21 @@ print("Summary Statistics!")
 summary(Credit[, vars.categorical])
 ```
 
-While releveling has no effect on the predicted values of the linear model, 
-changing the baseline levels will affect the coefficient estimates of the 
-dummy variables (which are now dummy variables with respect to another 
-baseline level) and possibly the significance statistics such as 
-$t$-statistics for the dummy variables and the corresponding $p$-values. 
-Remember, the $p$-values measure how different the non-baseline levels are
-from the baseline level, and changing the baseline level certainly changes 
-the measurement of such differences.
+While releveling has no effect on the predicted values of the linear
+model, changing the baseline levels will affect the coefficient
+estimates of the dummy variables (which are now dummy variables with
+respect to another baseline level) and possibly the significance
+statistics such as $t$-statistics for the dummy variables and the
+corresponding $p$-values. Remember, the $p$-values measure how different
+the non-baseline levels are from the baseline level, and changing the
+baseline level certainly changes the measurement of such differences.
 
-As you can see, the baseline levels of Gender, Married, and Ethnicity 
+As you can see, the baseline levels of Gender, Married, and Ethnicity
 have been changed respectively from "Male", "No", and "African American"
-to "Female", ""Yes''"Yes", and "Caucasian", 
-which now come first in the frequency 
-tables for Married and Ethnicity.
+to "Female", ""Yes''"Yes", and "Caucasian", which now come first in the
+frequency tables for Married and Ethnicity.
 
-Let's refine the model fitted above with releveling. 
+Let's refine the model fitted above with releveling.
 
 ```{r}
 # To make sure factors in the training set are releveled
@@ -473,30 +441,28 @@ summary(model.full)
 
 ## Advantages and Disadvantages of Binarizing the Factor Variables
 
-Describe the advantages and disadvantages of binarizing 
-the factor variables before performing feature selection.
+Describe the advantages and disadvantages of binarizing the factor
+variables before performing feature selection.
 
-Before implementing feature selection, 
-sometimes it is desirable to explicitly binarize 
-categorical predictors with three or more levels. 
-Although the \verb|lm()| function is capable of automatically converting 
-categorical predictors into dummy variables behind the scenes, 
-as we observed before, and so whether or not we binarize the categorical 
-predictors in advance has no impact on a fitted linear model, 
-explicitly doing binarization can help make the feature 
-selection process we are going to perform more meaningful.
+Before implementing feature selection, sometimes it is desirable to
+explicitly binarize categorical predictors with three or more levels.
+Although the \verb|lm()| function is capable of automatically converting
+categorical predictors into dummy variables behind the scenes, as we
+observed before, and so whether or not we binarize the categorical
+predictors in advance has no impact on a fitted linear model, explicitly
+doing binarization can help make the feature selection process we are
+going to perform more meaningful.
 
 Well, then how to binarize a factor variables in R?
 
-Compared to generating new features such as 
-$x^2$, $x^3$, $\log(x)$, etc., for a numeric variable $x$,
-binarization of categorical variables is conceptually
-more subtle and programmatically more difficult to implement in R. 
-One of the common functions to be used is  the \verb|dummyVars()|
-function in t e caret package and we will use it. 
-Among the four categorical variables Gender, Student, Married, and Ethnicity, 
-only Ethnicity has more than two levels and 
-has to be binarized by two dummy variables. 
+Compared to generating new features such as $x^2$, $x^3$, $\log(x)$,
+etc., for a numeric variable $x$, binarization of categorical variables
+is conceptually more subtle and programmatically more difficult to
+implement in R. One of the common functions to be used is the
+\verb|dummyVars()| function in t e caret package and we will use it.
+Among the four categorical variables Gender, Student, Married, and
+Ethnicity, only Ethnicity has more than two levels and has to be
+binarized by two dummy variables.
 
 ```{r}
 library(caret)
@@ -509,20 +475,20 @@ binarized_vars <- data.frame(predict(binarizer, newdata = Credit))
 head(binarized_vars)
 ```
 
-The \verb|binarized_vars| data frame contains all of the dummy variables. 
-So, let's combine it with the original Credit dataset via the \verb|cbind()|
-function and rename it with a \verb|.bin| suffix to distinguish it from the 
-original non-binarized dataset.
+The \verb|binarized_vars| data frame contains all of the dummy
+variables. So, let's combine it with the original Credit dataset via the
+\verb|cbind()| function and rename it with a \verb|.bin| suffix to
+distinguish it from the original non-binarized dataset.
 
 ```{r}
 Credit.bin <- cbind(Credit, binarized_vars)
 head(Credit.bin)
 ```
 
-Given the binarized variables, 
-the original categorical predictors are no longer needed as 
-they duplicate the information contained in the dummy variables. 
-They can be dropped by assigning them to the \verb|NULL| symbol.
+Given the binarized variables, the original categorical predictors are
+no longer needed as they duplicate the information contained in the
+dummy variables. They can be dropped by assigning them to the
+\verb|NULL| symbol.
 
 ```{r}
 Credit.bin$Gender <- NULL
@@ -532,8 +498,8 @@ Credit.bin$Ethnicity <- NULL
 head(Credit.bin)
 ```
 
-Now that the expanded dataset with binarized variables is available, 
-we again split it into the training and test sets. 
+Now that the expanded dataset with binarized variables is available, we
+again split it into the training and test sets.
 
 ```{r}
 data.train.bin <- Credit.bin[partition, ]
@@ -542,8 +508,8 @@ data.test.bin <- Credit.bin[-partition, ]
 
 ## Refitting the MLR with Binarization
 
-Regardless, binarize the factor variables and refit 
-the multiple linear regression model in Exercise 5.
+Regardless, binarize the factor variables and refit the multiple linear
+regression model in Exercise 5.
 
 ```{r}
 # The interaction term is now Income:Student.Yes, not Income:Student
@@ -553,27 +519,28 @@ summary(model.full.bin)
 
 # Exercise 7 -- Feature Selection
 
-Of course, 
-some of the features in the full model may lack 
-predictive power and result in overfitting.
+Of course, some of the features in the full model may lack predictive
+power and result in overfitting.
 
 ## Stepwise Selection
 
-Perform stepwise selection using the \verb|stepAIC()|
-function to determine which features should be retained.
+Perform stepwise selection using the \verb|stepAIC()| function to
+determine which features should be retained.
 
-* When using this function, there are two decisions to make:
-  + Forward (direction = "forward") vs. backward (direction = "backward").
-  + AIC (k = 2) vs. BIC (k = log(nrow(data.train))).
-  
-  Describe each decision and the implications in choosing one
-  option versus the other.
+- When using this function, there are two decisions to make:
 
-* Employ forward selection using BIC.
+  - Forward (direction = "forward") vs. backward (direction =
+    "backward").
+  - AIC (k = 2) vs. BIC (k = log(nrow(data.train))).
+
+  Describe each decision and the implications in choosing one option
+  versus the other.
+
+- Employ forward selection using BIC.
 
 ## Backward Selection with the AIC
 
-Run the summary function on the linear model selected by this process. 
+Run the summary function on the linear model selected by this process.
 Provide the summary output and list the variables selected.
 
 ```{r}
@@ -589,40 +556,38 @@ summary(model.backward.AIC)
 
 The following six features remain in the fin al model:
 
-* Income
-* Rating
-* Age 
-* Gender.Female
-* Student.Yes
-* Married.Yes
+- Income
+- Rating
+- Age
+- Gender.Female
+- Student.Yes
+- Married.Yes
 
 ## Stepwise Selection for Non-binarized Data
 
-If we perform backward stepwise selection for the 
-linear model fitted to the non-binarized training set.
-Pay attention to the Ethnicity variable.
+If we perform backward stepwise selection for the linear model fitted to
+the non-binarized training set. Pay attention to the Ethnicity variable.
 
 ```{r}
 model.no.binarize <- stepAIC(model.full, steps = 1)
 ```
-Without binarization, the entire Ethnicity variable, which is 
-associated with two degrees of freedom (look at the Df column), 
-one for each of the two non-baseline levels, is treated as
-a single predictor and considered being dropped altogether. 
-Although this does not make a material difference in this case study, 
-in other cases t his may not be desirable as we are ignoring
-the possibility that only one of the two non-baseline levels
-of Ethnicity is insignificant while the other one is significant
+
+Without binarization, the entire Ethnicity variable, which is associated
+with two degrees of freedom (look at the Df column), one for each of the
+two non-baseline levels, is treated as a single predictor and considered
+being dropped altogether. Although this does not make a material
+difference in this case study, in other cases t his may not be desirable
+as we are ignoring the possibility that only one of the two non-baseline
+levels of Ethnicity is insignificant while the other one is significant
 (with respect to the baseline).
 
 ## Forward Selection with the BIC
 
-To perform forward selection requires more coding effort. 
-Besides the additional option \verb|direction = "forward"|
-to mean that we are doing forward selection,
-we have to specify, in the scope argument of the \verb|stepAIC()| 
-function, a two-component list to define the range of models 
-to be examined in the stepwise selection process.
+To perform forward selection requires more coding effort. Besides the
+additional option \verb|direction = "forward"| to mean that we are doing
+forward selection, we have to specify, in the scope argument of the
+\verb|stepAIC()| function, a two-component list to define the range of
+models to be examined in the stepwise selection process.
 
 ```{r}
 # first fit the null model (i.e., model with no predictors)
@@ -640,31 +605,30 @@ summary(model.forward.BIC)
 
 Features are added in the following order:
 
-* Rating
-* Income
-* Student.No
+- Rating
+- Income
+- Student.No
 
 # Exercise 8 -- Model Validation
 
-Here we select and validate the recommended model. 
+Here we select and validate the recommended model.
 
-
-Now that we have different linear models of varying degrees of complexity
-fitted to the training set, it is time to compare their predictive
-performance on the common test set and see which one is the most predictive. 
-We are particularly interested in whether reducing the complexity of a linear
-model by stepwise selection algorithms can enhance prediction accuracy. 
+Now that we have different linear models of varying degrees of
+complexity fitted to the training set, it is time to compare their
+predictive performance on the common test set and see which one is the
+most predictive. We are particularly interested in whether reducing the
+complexity of a linear model by stepwise selection algorithms can
+enhance prediction accuracy.
 
 ## Computing RMSEs
 
-Evaluate the RMSE of the models in the preceding exercises against the test set.
+Evaluate the RMSE of the models in the preceding exercises against the
+test set.
 
-A natural and direct measure of the prediction performance of linear models,
-where the target variable is numeric, is the test RMSE. 
-The smaller the test RMSE, the better.
-Here, we compute and prints the test RMSE 
-of the four models we have constructed.
-
+A natural and direct measure of the prediction performance of linear
+models, where the target variable is numeric, is the test RMSE. The
+smaller the test RMSE, the better. Here, we compute and prints the test
+RMSE of the four models we have constructed.
 
 ```{r}
 RMSE(data.test$Balance, predict(model.null, newdata = data.test.bin))
@@ -673,9 +637,8 @@ RMSE(data.test$Balance, predict(model.backward.AIC, newdata = data.test.bin))
 RMSE(data.test$Balance, predict(model.forward.BIC, newdata = data.test.bin))
 ```
 
-For your convenience, 
-the following table reports the test RMSE extracted 
-from the R output for each of the four models.
+For your convenience, the following table reports the test RMSE
+extracted from the R output for each of the four models.
 
 ```{r}
 knitr::include_graphics("MLR_Credit_RMSEs1.png")
@@ -685,28 +648,25 @@ knitr::include_graphics("MLR_Credit_RMSEs1.png")
 
 Make a recommendation as to which model should be used.
 
-Observe that the two reduced models resulting from 
-stepwise selection have a (slightly) lower test RMSE 
-than the full model despite having far fewer features.
-Comparing the two reduced models, we can see that the
-model based on forward selection and BIC not only is 
-simpler in the sense that it is nested within that 
-based on the backward selection and AIC,
-but also is more predictive in the sense that its test RMSE is lower. 
-On the basis of both prediction accuracy and interpretability, 
-the final model based on forward selection and BIC is justifiably
-the most promising model among all of the linear models 
-we have considered and we will recommend using this model.
+Observe that the two reduced models resulting from stepwise selection
+have a (slightly) lower test RMSE than the full model despite having far
+fewer features. Comparing the two reduced models, we can see that the
+model based on forward selection and BIC not only is simpler in the
+sense that it is nested within that based on the backward selection and
+AIC, but also is more predictive in the sense that its test RMSE is
+lower. On the basis of both prediction accuracy and interpretability,
+the final model based on forward selection and BIC is justifiably the
+most promising model among all of the linear models we have considered
+and we will recommend using this model.
 
 ## Model Diagnostic
 
-Generate and interpret diagnostic plots for the
-recommended model to check the model assumptions.
+Generate and interpret diagnostic plots for the recommended model to
+check the model assumptions.
 
-Now that the model based on forward selection and BIC 
-appears to be the best among the four linear models,
-let's diagnose it carefully for any anomalies with
-the use of appropriate graphical displays.
+Now that the model based on forward selection and BIC appears to be the
+best among the four linear models, let's diagnose it carefully for any
+anomalies with the use of appropriate graphical displays.
 
 ```{r}
 plot(model.forward.BIC)
@@ -714,62 +674,58 @@ plot(model.forward.BIC)
 
 # Exercise 9 -- Regularization -- Important
 
-Elastic net (ET) could also be used to perform feature selection. 
+Elastic net (ET) could also be used to perform feature selection.
 
 ```{r}
 # This is externally typed LaTeX content. 
 knitr::include_graphics("ET_Reg1.png")
 ```
 
-An alternative to using stepwise selection for identifying useful features 
-is regularization, which reduces the magnitude of the coefficient estimates
-via the use of a penalty term and serves to prevent overfitting. 
-Variables with limited predictive power will receive a coefficient 
-estimate that is small, if not exactly zero, 
-and therefore are removed from the model.
-In this exercise, we will fit a regularized regression model with alpha equal 
-to 0.5 (i.e., an even mix between ridge regression and lasso) to the Credit 
-dataset and compare its performance to that of the models based on the
-stepwise selection.
-Because our goal in this case study is to identify key factors affecting 
-Balance, using alpha equal to 0, which is ridge regression and does 
-not eliminate any variables, is not appropriate.
+An alternative to using stepwise selection for identifying useful
+features is regularization, which reduces the magnitude of the
+coefficient estimates via the use of a penalty term and serves to
+prevent overfitting. Variables with limited predictive power will
+receive a coefficient estimate that is small, if not exactly zero, and
+therefore are removed from the model. In this exercise, we will fit a
+regularized regression model with alpha equal to 0.5 (i.e., an even mix
+between ridge regression and lasso) to the Credit dataset and compare
+its performance to that of the models based on the stepwise selection.
+Because our goal in this case study is to identify key factors affecting
+Balance, using alpha equal to 0, which is ridge regression and does not
+eliminate any variables, is not appropriate.
 
 ## The glmnet() Function
 
-To implement regularization, 
-we will use the \verb|glmnet| package,
+To implement regularization, we will use the \verb|glmnet| package,
 where the main function is the \verb|glmnet()| function.
 
-This function can be used to fit ridge regression models, 
-lasso models, and general elastic nets, 
-but it has different syntax from the \verb|lm()|
-function you have been familiar with.
-You have to supply the design matrix as input 
-via \verb|model.matrix()| function. 
+This function can be used to fit ridge regression models, lasso models,
+and general elastic nets, but it has different syntax from the
+\verb|lm()| function you have been familiar with. You have to supply the
+design matrix as input via \verb|model.matrix()| function.
 
 ```{r}
 X.train <- model.matrix(Balance ~ . + Income:Student, data = data.train)
 head(X.train)  # print out a few rows of the design matrix
 ```
 
-A particular advantage of the \verb|model.matrix()| function is that 
-categorical predictors will be automatically transformed into dummy variables, 
-just like the \verb|dummyVars()| function, and the design matrix is of full rank.
+A particular advantage of the \verb|model.matrix()| function is that
+categorical predictors will be automatically transformed into dummy
+variables, just like the \verb|dummyVars()| function, and the design
+matrix is of full rank.
 
-As soon as a design matrix has been set up, 
-it can be passed to the \verb|glmnet()| function along withthe vector of 
-response values and the values of the hyperparameters $\alpha$ and $\lambda$.
+As soon as a design matrix has been set up, it can be passed to the
+\verb|glmnet()| function along withthe vector of response values and the
+values of the hyperparameters $\alpha$ and $\lambda$.
 
 ## Fitting Elastic Net (ET)
 
-Now, we fit five regularized regression models with 
-$\alpha =0.5$ and $\lambda = 0, 10, 100, 500, 1000$ 
-(one model for each value of$\lambda$) to the training set, 
-and save the five fitted models collectively as an object 
-named \verb|m.lambda|.
-Note that the family argument is set to "gaussian" because we are 
-dealing with linear models with normal (a.k.a. Gaussian) errors.
+Now, we fit five regularized regression models with $\alpha =0.5$ and
+$\lambda = 0, 10, 100, 500, 1000$ (one model for each value of$\lambda$)
+to the training set, and save the five fitted models collectively as an
+object named \verb|m.lambda|. Note that the family argument is set to
+"gaussian" because we are dealing with linear models with normal (a.k.a.
+Gaussian) errors.
 
 ```{r}
 #install.packages("glmnet")  
@@ -784,23 +740,25 @@ m.lambda <- glmnet(x = X.train,
 
 The first way to extract coefficient estimates is as given below:
 
-```{}
+```         
 m.lambda$a0
 m.lambda$beta
 ```
 
 The second way extract the estimated coefficients is to use
-\verb|coef()| function to a \verb|glmnet| object returns
-a matrix of coefficient estimates, including the intercept, 
-arranged by columns according to different values of $\lambda$.
+\verb|coef()| function to a \verb|glmnet| object returns a matrix of
+coefficient estimates, including the intercept, arranged by columns
+according to different values of $\lambda$.
 
 ```{r}
 round(coef(m.lambda), 4)
 ```
+
 When $\lambda = 1,000$, the regularization penalty is so large that all
 of the coefficient estimates except the intercept become exactly zero,
-in which case the model is effectively the null model with only the intercept.
-The estimated intercept should be the mean value of Balance in the training set.
+in which case the model is effectively the null model with only the
+intercept. The estimated intercept should be the mean value of Balance
+in the training set.
 
 ```{r}
 mean(data.train$Balance)
@@ -808,55 +766,49 @@ mean(data.train$Balance)
 
 # Exercise 10 -- Cross-Validation -- Important
 
-This exercise is specifically to learn the process of
-**Hyperparameter Tuning**, an important concept in ML.
+This exercise is specifically to learn the process of **Hyperparameter
+Tuning**, an important concept in ML.
 
 ## cv.glmnet() Function
 
-The \verb|glmnet()| function requires that value(s) $\lambda$
-be supplied a priori and does not directly tell us the optimal 
-value of $\lambda$. 
-In fact, in Exercise 9 we experimented with five 
-pre-specified values of $\lambda$, 
-mainly to explore the impact of regularization but did not attempt 
-to optimize the value of $\lambda$.
-Fortunately, the companion function \verb|cv.glmnet()| 
-(with "cv" standing for Cross Validation) fills this gap.
-This function performs $k$-fold cross-validation 
-(10-fold cross-validation, by default), 
-calculates the cross-validation error for a
-range of values of $\lambda$, 
-and produces the optimal value of $\lambda$ as a by-product.
+The \verb|glmnet()| function requires that value(s) $\lambda$ be
+supplied a priori and does not directly tell us the optimal value of
+$\lambda$. In fact, in Exercise 9 we experimented with five
+pre-specified values of $\lambda$, mainly to explore the impact of
+regularization but did not attempt to optimize the value of $\lambda$.
+Fortunately, the companion function \verb|cv.glmnet()| (with "cv"
+standing for Cross Validation) fills this gap. This function performs
+$k$-fold cross-validation (10-fold cross-validation, by default),
+calculates the cross-validation error for a range of values of
+$\lambda$, and produces the optimal value of $\lambda$ as a by-product.
 
-You may supply a sequence of values of $\lambda$ to be 
-tested or the \verb|cv.glmnet()| will choose the 
-values of $\lambda$ in its own. 
-The default value is NULL.
+You may supply a sequence of values of $\lambda$ to be tested or the
+\verb|cv.glmnet()| will choose the values of $\lambda$ in its own. The
+default value is NULL.
 
-The \verb|cv.glmnet()| function is commonly accompanied with 
-an application of the \verb|plot()| function to a \verb|cv.glmnet()| object. 
-This returns a cross-validation curve, that is, the cross-validation error
-plotted as a function of the values of $\lambda$ used. 
-Such a plot has several useful features:
+The \verb|cv.glmnet()| function is commonly accompanied with an
+application of the \verb|plot()| function to a \verb|cv.glmnet()|
+object. This returns a cross-validation curve, that is, the
+cross-validation error plotted as a function of the values of $\lambda$
+used. Such a plot has several useful features:
 
 ```{r}
 # This is externally typed LaTeX content. 
 knitr::include_graphics("CV_Features1.png")
 ```
 
-
 ## Tuning Hyperparameter via CV
 
-Use cross-validation to set the value of $\lambda$
-for fitting the regularized model ($\alpha = 0.5$) in Exercise 9.
+Use cross-validation to set the value of $\lambda$ for fitting the
+regularized model ($\alpha = 0.5$) in Exercise 9.
 
-* List the features used in the resulting model.
-Compare the selected features to those using stepwise regression in Exercise 7.
-Comment on any differences.
+- List the features used in the resulting model. Compare the selected
+  features to those using stepwise regression in Exercise 7. Comment on
+  any differences.
 
-* Calculate the RMSE on the test set.
+- Calculate the RMSE on the test set.
 
-** Recommend which model should be used. Justify your choice. 
+\*\* Recommend which model should be used. Justify your choice.
 
 ```{r}
 set.seed(1111)
@@ -873,10 +825,9 @@ m$lambda.min
 m$lambda.1se
 ```
 
-We now refit the regularized model on the training set with 
-$\lambda = 0.8885539$, save it as an object named \verb|m.min$,
-make predictions on the test set,
-and finally evaluate the model's RMSE.
+We now refit the regularized model on the training set with
+$\lambda = 0.8885539$, save it as an object named \\verb\|m.min\$, make
+predictions on the test set, and finally evaluate the model's RMSE.
 
 ```{r}
 # Fit the regularized model using lambda.min
@@ -897,28 +848,26 @@ m.min.pred <- predict(m.min, newx = X.test)
 RMSE(data.test$Balance, m.min.pred)
 ```
 
-**Conclusion:** 
-The test RMSE of the resulting model is 103.9201,
-which is slightly higher than that of the final model in
-exercise 7 (which is 102.6785). 
-In addition to inferior predictive performance, the regularized model
-is also much harder to interpret due to its substantially larger size, 
-whereas the model in exercise 7 only has three features. 
-As a result, it is reasonable to recommend the model in Exercise 7 
-as the final model owing to its better prediction accuracy and interpretability.
+**Conclusion:** The test RMSE of the resulting model is 103.9201, which
+is slightly higher than that of the final model in exercise 7 (which is
+102.6785). In addition to inferior predictive performance, the
+regularized model is also much harder to interpret due to its
+substantially larger size, whereas the model in exercise 7 only has
+three features. As a result, it is reasonable to recommend the model in
+Exercise 7 as the final model owing to its better prediction accuracy
+and interpretability.
 
-## Other than CV for Tuining? 
+## Other than CV for Tuining?
 
-Suggest another method to set the value of lambda.
-There is no need to implement this method. 
+Suggest another method to set the value of lambda. There is no need to
+implement this method.
 
 This is exactly asking "Fitting the Regularized Model With lambda.1se."
 
-Instead of using the value of $\lambda$ that
-minimizes the cross-validation error, we can also select
-$\lambda$ based on the one-standard-error rule
-and set it equal to \verb|lambda.1se|, or 7.550517 
-(which is much larger than \verb|lambda.min|).
+Instead of using the value of $\lambda$ that minimizes the
+cross-validation error, we can also select $\lambda$ based on the
+one-standard-error rule and set it equal to \verb|lambda.1se|, or
+7.550517 (which is much larger than \verb|lambda.min|).
 
 ```{r}
 # Fit the regularized model using lambda.1se
@@ -935,7 +884,3 @@ m.1se$beta
 m.1se.pred <- predict(m.1se, newx = X.test)
 RMSE(data.test$Balance, m.1se.pred)
 ```
-
-
-
-
