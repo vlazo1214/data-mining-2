@@ -1,0 +1,258 @@
+---
+title: "London Crystals Moissanite Key" 
+subtitle: |
+  | STA 6704 
+  |
+  | Program Name: LondonCrystals_Moissanite_Key.RMD
+output:
+  pdf_document:
+    number_sections: yes
+    toc: no
+    toc_depth: 3
+  word_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    df_print: paged
+    toc: no
+    toc_depth: '3'
+---
+
+<!-- \pagenumbering{gobble} -->
+
+# Introduction
+
+Moissanite, a cheaper alternative to diamonds with 
+very similar properties and measurements,
+is a growing market among Millennials and Gen-Z.
+You are a Data Scientist (DS) for London Crystals, 
+an international jewelry chain which has over 
+\$2 billion in current assets and a significant amount of cash. 
+Rather than expanding their diamond operations, 
+London Crystals is considering entering
+the moissanite business to diversify their sales. 
+A large moissanite distributor is open to a
+potential acquisition, 
+however it has not priced its full inventory yet.
+London Crystals has asked for your help to assess 
+the value of the potential acquisition. 
+You will be working with a subset of the
+inventory that is already measured and priced.
+
+The dataset we are investigating here is 
+\verb|Moissanite.csv| available on WebCourses. 
+The csv file contains a highly modified version 
+of the original “diamonds” dataset.
+
+# Work to be Completed
+
+In this assignment, you will be working
+to model the data by implementing stepwise 
+selection and regularization in order to 
+improve upon a multiple linear regression (MLR). 
+You begin by creating an MLR model on 
+\verb|price| using all available predictors.
+
+# Note
+
+Where-ever instructed, 
+you are required to change/edit some parts of the code. 
+Then, run the corresponding chunk to answer the questions.
+
+# Preparing the Data
+
+Run the following chunk without changing it to 
+perform the necessary data preparation/cleaning.
+
+```{r}
+library(caret)
+
+moissanite <- read.csv("Moissanite.csv", stringsAsFactors = TRUE)
+
+moissanite$cut <- factor(moissanite$cut, 
+                         levels = c("Fair", "Good", "Very Good", "Premium", "Ideal"))
+moissanite$clarity <- factor(moissanite$clarity, 
+                             levels = c("I.SI", "VS", "VV", "IF"))
+
+set.seed(161)
+ind <- createDataPartition(moissanite$price,
+                           list = FALSE, p = 0.7)
+
+train <- moissanite[ind, ]
+test <- moissanite[-ind, ]
+```
+
+
+# Exercise 1
+
+You just need to run the following code and 
+write your answer in the answer sheet. 
+
+```{r}
+mlr.full <- lm(price ~ ., train)
+
+summary(mlr.full)
+```
+Provide details on the full MLR model’s coefficients. 
+List all the variables which are statistically 
+insignificant at 5% significance level.
+
+# Exercise 2
+
+Board of Directors at your Company are not interested in model 
+interpretability and wants you to focus on optimizing performance. 
+Still, you have concerns over the number of variables currently in the model.
+You decide to run a stepwise selection procedure 
+with selection criterion either AIC or BIC.
+
+Recommend a specific stepwise procedure starting from the full model. 
+Justify your recommendation. 
+Write down which variables are eliminated and 
+also report your final resulting MLR. 
+
+```{r}
+library(MASS)
+
+# An empty (i.e., intercept-only) MLR is needed to implement stepAIC.
+mlr.mod0 <- lm(price ~ 1, train)
+
+# ----------- Starting Student Code -----------------------#
+# Complete the following lines of code to run stepwise selection. 
+# stepAIC(mlr.full,
+#         k = 2, # Change to log(nrow(train)) for BIC
+#         direction = "backward",
+#         scope     = list(upper = mlr.full, lower = mlr.mod0))
+# ----------- Ending Student Code ------------------------#
+
+# ------------ Starting Key Code -------------------------#
+stepAIC(mlr.full,
+        k = 2, # Change to log(nrow(train)) for BIC
+        direction = "backward",
+        scope     = list(upper = mlr.full, lower = mlr.mod0))
+# ------------ Ending Key Code ---------------------------#
+```
+
+```{r}
+# ----------- Starting Student Code -----------------------#
+# From the stepAIC output, copy the code that runs the resulting stepwise model.
+# mlr.step <- lm(formula = price ~ carat + cut + color + clarity + table + 
+#     x + y + z + distribution, data = train)
+# ----------- Ending Student Code ------------------------#
+
+
+# ------------ Starting Key Code -------------------------#
+# This is only for answer! 
+mlr.step <- lm(formula = price ~ carat + cut + color + clarity + table + 
+                 x + y + z + distribution, data = train)
+summary(mlr.step)
+# ------------ Ending Key Code ---------------------------#
+```
+
+# Exercise 3
+
+Your supervisor desires to consider ridge regression.
+The provided code specifies candidate lambda values 
+ranging from 0.01 to 100,000 for cross-validation; 
+do not change this. 
+On the other hand, you must provide the 
+correct value for the argument alpha. 
+Furthermore, your supervisor instructs you to use 
+the lambda value given by \$lambda.1se 
+(rather than \$lambda.min) for the ridge model.
+
+* List the value of lambda that minimizes the cross-validation error. 
+
+* Describe the effectiveness of ridge regression on the 
+data in light of your answer above.
+
+
+* Explain the impact on the ridge model’s flexibility 
+due to your supervisor’s choice of lambda value.
+
+```{r}
+library(glmnet)
+
+trainXmat <- model.matrix(price ~ ., data = train)
+
+set.seed(161)
+mlr.ridge <- cv.glmnet(x      = trainXmat[, -1],
+                       y      = train$price,
+                       family = "gaussian",
+                       alpha  = 0,  # what's the correct value for ridge???
+                       lambda = 10^(seq(-2, 5, by = 0.25)))
+
+plot(mlr.ridge)
+
+mlr.ridge.mod <- glmnet(x      = trainXmat[, -1],
+                        y      = train$price,
+                        family = "gaussian",
+                        lambda = mlr.ridge$lambda.1se,
+                        alpha  = 0)  # what's the correct value for ridge???
+```
+
+```{r}
+mlr.ridge$lambda.min
+mlr.ridge$lambda.1se
+```
+
+# Exercise 4
+
+Your supervisor also desires to consider lasso regression. 
+The provided code specifies candidate lambda values 
+ranging from 0.01 to 100,000 for cross-validation; 
+do not change this.
+On the other hand, you must provide the correct value for the argument alpha. 
+Furthermore, your supervisor instructs you to use the lambda value given 
+by \$lambda.1se (rather than \$lambda.min) for the lasso model.
+
+Comment on how the coefficients differ between the 
+ridge model from Exercise 3 and the lasso model.
+
+```{r}
+set.seed(161)
+mlr.lasso <- cv.glmnet(x      = trainXmat[, -1],
+                       y      = train$price,
+                       family = "gaussian",
+                       alpha  = 1,  # what's the correct value for lasso???
+                       lambda = 10^(seq(-2, 5, by = 0.25)))
+
+plot(mlr.lasso)
+
+mlr.lasso.mod <- glmnet(x      = trainXmat[, -1],
+                        y      = train$price,
+                        family = "gaussian",
+                        lambda = mlr.lasso$lambda.1se,
+                        alpha  = 1)  # what's the correct value for lasso???
+```
+
+```{r}
+coef(mlr.ridge.mod)
+coef(mlr.lasso.mod)
+```
+
+# Exercise 5
+
+Recommend one of the models to the Board of Directors. 
+Justify your recommendation.
+
+```{r}
+testXmat <- model.matrix(price ~ ., data = test)
+
+mlr.full.preds <- predict(mlr.full, test)
+mlr.step.preds <- predict(mlr.step, test)
+mlr.ridge.preds <- predict(mlr.ridge.mod, newx = testXmat[, -1])
+mlr.lasso.preds <- predict(mlr.lasso.mod, newx = testXmat[, -1])
+
+print("Training RMSEs")
+sqrt(sum((train$price - predict(mlr.full))^2) / nrow(train))
+sqrt(sum((train$price - predict(mlr.step))^2) / nrow(train))
+sqrt(sum((train$price - predict(mlr.ridge.mod, newx = trainXmat[, -1]))^2) / nrow(train))
+sqrt(sum((train$price - predict(mlr.lasso.mod, newx = trainXmat[, -1]))^2) / nrow(train))
+
+print("Test RMSEs")
+sqrt(sum((test$price - mlr.full.preds)^2) / nrow(test))
+sqrt(sum((test$price - mlr.step.preds)^2) / nrow(test))
+sqrt(sum((test$price - mlr.ridge.preds)^2) / nrow(test))
+sqrt(sum((test$price - mlr.lasso.preds)^2) / nrow(test))
+```
+
