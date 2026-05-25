@@ -72,7 +72,7 @@ moissanite <- read.csv("Moissanite.csv", stringsAsFactors = TRUE)
 moissanite$cut <- factor(moissanite$cut, 
                          levels = c("Fair", "Good", "Very Good", "Premium", "Ideal"))
 moissanite$clarity <- factor(moissanite$clarity, 
-                             levels = c("I.SI", "VS", "VV", "IF"))
+                             levels = unique(moissanite$clarity))
 
 set.seed(161)
 ind <- createDataPartition(moissanite$price,
@@ -96,6 +96,12 @@ summary(mlr.full)
 Provide details on the full MLR model’s coefficients. 
 List all the variables which are statistically 
 insignificant at 5% significance level.
+
+
+
+```{r}
+boxplot(price ~ clarity * cut, train)
+```
 
 # Exercise 2
 
@@ -147,6 +153,11 @@ mlr.step <- lm(formula = price ~ carat + cut + color + clarity + table +
 summary(mlr.step)
 # ------------ Ending Key Code ---------------------------#
 ```
+```{r}
+mlr.step <- lm(formula = price ~ cut * clarity + carat + cut + color + clarity + table + x + y + z, data = train)
+summary(mlr.step)
+```
+
 
 # Exercise 3
 
