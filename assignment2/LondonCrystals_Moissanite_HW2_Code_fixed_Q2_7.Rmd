@@ -1,0 +1,391 @@
+---
+title: "London Crystals Moissanite - HW2 Code"
+subtitle: |
+  | STA 6704
+  | Assignment 2 Student Code
+output:
+  html_document:
+    df_print: paged
+    toc: no
+    toc_depth: '3'
+  word_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+# Introduction
+
+This R Markdown file provides the code needed for the computational parts of Assignment 2. Run the chunks below with `Moissanite.csv` in your working directory, then use the output to answer the questions in the Word document.
+
+The dataset `Moissanite.csv` contains a modified version of the original diamonds dataset. The response variable is `price`, and the predictors are described in the assignment data dictionary. In the posted version of `Moissanite.csv`, the original clarity levels have already been collapsed into `I.SI`, `VS`, `VV`, and `IF`. The setup chunk below also includes a compatibility check so that the code can safely handle either the collapsed clarity labels or the original diamond clarity labels.
+
+If any required package is missing on your computer, uncomment and run the installation line below once in the R console, then run this R Markdown file again.
+
+```{r package-installation-note, eval=FALSE}
+# install.packages(c("caret", "MASS", "glmnet"))
+```
+
+# Preparing the Data
+
+Run this chunk first. It loads the data, orders the categorical variables, checks that the expected categories were read correctly, and creates the same train/test split for everyone. Do not change the seed, train/test split, or lambda grid.
+
+```{r setup, message=FALSE, warning=FALSE}
+library(caret)
+library(MASS)
+library(glmnet)
+
+moissanite <- read.csv("Moissanite.csv", stringsAsFactors = FALSE)
+
+required_columns <- c("carat", "cut", "color", "clarity", "depth", "table", "price", "x", "y", "z")
+missing_columns <- setdiff(required_columns, names(moissanite))
+if (length(missing_columns) > 0) {
+  stop(paste("Moissanite.csv is missing these required columns:", paste(missing_columns, collapse = ", ")))
+}
+
+# Keep only the variables used in this assignment, in a consistent order.
+moissanite <- moissanite[, required_columns]
+
+# Remove accidental leading/trailing spaces in categorical variables.
+moissanite$cut <- trimws(as.character(moissanite$cut))
+moissanite$color <- trimws(as.character(moissanite$color))
+moissanite$clarity <- trimws(as.character(moissanite$clarity))
+
+# Collapse clarity if the CSV still uses the original diamonds labels.
+moissanite$clarity <- ifelse(moissanite$clarity %in% c("SI1", "SI2", "I1"), "I.SI", moissanite$clarity)
+moissanite$clarity <- ifelse(moissanite$clarity %in% c("VS1", "VS2"), "VS", moissanite$clarity)
+moissanite$clarity <- ifelse(moissanite$clarity %in% c("VVS1", "VVS2"), "VV", moissanite$clarity)
+
+# Use the lower-quality category as the baseline for ordered quality variables.
+moissanite$cut <- factor(moissanite$cut,
+                         levels = c("Fair", "Good", "Very Good", "Premium", "Ideal"))
+
+moissanite$color <- factor(moissanite$color,
+                           levels = c("J", "I", "H", "G", "F", "E", "D"))
+
+moissanite$clarity <- factor(moissanite$clarity,
+                             levels = c("I.SI", "VS", "VV", "IF"))
+
+# Sanity checks. These stop the file early if the CSV uses unexpected labels.
+if (anyNA(moissanite$cut)) {
+  stop("Some cut values were not recognized. Check that Moissanite.csv uses Fair, Good, Very Good, Premium, and Ideal.")
+}
+
+if (anyNA(moissanite$color)) {
+  stop("Some color values were not recognized. Check that Moissanite.csv uses D, E, F, G, H, I, and J.")
+}
+
+if (anyNA(moissanite$clarity)) {
+  stop("Some clarity values were not recognized. Expected collapsed labels I.SI, VS, VV, IF, or original labels SI1, SI2, I1, VS1, VS2, VVS1, VVS2, IF.")
+}
+
+if (any(!is.finite(moissanite$price)) || any(moissanite$price <= 0)) {
+  stop("The Gamma GLM requires all price values to be positive and finite.")
+}
+
+# The Gamma GLM in Exercise 2.7 is sensitive to invalid physical measurements.
+# A small number of rows in the diamonds/moissanite-style data have x, y, or z
+# recorded as 0, which is not physically meaningful for length/width/depth and
+# can cause glm() with Gamma(log) to diverge. Remove those rows before splitting.
+invalid_dimensions <- !is.finite(moissanite$x) | !is.finite(moissanite$y) | !is.finite(moissanite$z) |
+  moissanite$x <= 0 | moissanite$y <= 0 | moissanite$z <= 0
+
+if (any(invalid_dimensions)) {
+  message(sum(invalid_dimensions), " rows with non-positive or non-finite x/y/z were removed before model fitting.")
+  moissanite <- moissanite[!invalid_dimensions, ]
+}
+
+set.seed(161)
+ind <- createDataPartition(moissanite$price,
+                           list = FALSE, p = 0.7)
+
+train <- moissanite[ind, ]
+test  <- moissanite[-ind, ]
+
+rmse <- function(actual, predicted) {
+  sqrt(mean((actual - predicted)^2))
+}
+```
+
+# Exercise 2.1: Full MLR Model
+
+Run the following code to fit the full multiple linear regression model and inspect the coefficient table.
+
+```{r full-mlr}
+mlr.full <- lm(price ~ ., data = train)
+summary(mlr.full)
+```
+
+The following code lists coefficient terms with p-values greater than 0.05. For categorical predictors, this output refers to individual factor-level coefficients, not necessarily the entire categorical variable.
+
+```{r insignificant-coefficients}
+full_coef_table <- coef(summary(mlr.full))
+insignificant_terms <- full_coef_table[full_coef_table[, "Pr(>|t|)"] > 0.05, , drop = FALSE]
+
+insignificant_terms_table <- data.frame(
+  Term = rownames(insignificant_terms),
+  Estimate = insignificant_terms[, "Estimate"],
+  Std_Error = insignificant_terms[, "Std. Error"],
+  t_value = insignificant_terms[, "t value"],
+  p_value = insignificant_terms[, "Pr(>|t|)"],
+  row.names = NULL
+)
+
+insignificant_terms_table
+```
+
+# Exercise 2.2: Stepwise Selection
+
+The code below runs backward stepwise selection from the full model using AIC. It also runs the analogous BIC version so that you can compare and justify your recommendation.
+
+```{r stepwise-aic-bic}
+mlr.mod0 <- lm(price ~ 1, data = train)
+
+mlr.step.aic <- stepAIC(mlr.full,
+                        k = 2,
+                        direction = "backward",
+                        scope = list(upper = mlr.full, lower = mlr.mod0),
+                        trace = FALSE)
+
+mlr.step.bic <- stepAIC(mlr.full,
+                        k = log(nrow(train)),
+                        direction = "backward",
+                        scope = list(upper = mlr.full, lower = mlr.mod0),
+                        trace = FALSE)
+```
+
+Use the following output to report the final resulting MLRs and identify eliminated variables.
+
+```{r stepwise-results}
+formula(mlr.step.aic)
+formula(mlr.step.bic)
+
+full_terms <- attr(terms(mlr.full), "term.labels")
+aic_terms  <- attr(terms(mlr.step.aic), "term.labels")
+bic_terms  <- attr(terms(mlr.step.bic), "term.labels")
+
+cat("Variables eliminated by AIC stepwise selection:\n")
+setdiff(full_terms, aic_terms)
+
+cat("Variables eliminated by BIC stepwise selection:\n")
+setdiff(full_terms, bic_terms)
+
+summary(mlr.step.aic)
+summary(mlr.step.bic)
+```
+
+# Exercise 2.3: Ridge Regression
+
+For ridge regression, the code uses `alpha = 0`. The lambda grid is fixed as instructed in the assignment and should not be changed.
+
+```{r ridge}
+trainXmat <- model.matrix(price ~ ., data = train)
+testXmat  <- model.matrix(price ~ ., data = test)
+
+set.seed(161)
+mlr.ridge <- cv.glmnet(x = trainXmat[, -1],
+                       y = train$price,
+                       family = "gaussian",
+                       alpha = 0,
+                       lambda = 10^(seq(-2, 5, by = 0.25)))
+
+plot(mlr.ridge)
+
+mlr.ridge.mod <- glmnet(x = trainXmat[, -1],
+                        y = train$price,
+                        family = "gaussian",
+                        lambda = mlr.ridge$lambda.1se,
+                        alpha = 0)
+```
+
+The following values are needed for the ridge questions.
+
+```{r ridge-lambda-output}
+cat("Ridge alpha:\n")
+0
+
+cat("Ridge lambda.min:\n")
+mlr.ridge$lambda.min
+
+cat("Ridge lambda.1se:\n")
+mlr.ridge$lambda.1se
+
+cat("Ridge coefficients at lambda.1se:\n")
+coef(mlr.ridge.mod)
+```
+
+# Exercise 2.4: Lasso Regression
+
+For lasso regression, the code uses `alpha = 1`. The lambda grid is fixed as instructed in the assignment and should not be changed.
+
+```{r lasso}
+set.seed(161)
+mlr.lasso <- cv.glmnet(x = trainXmat[, -1],
+                       y = train$price,
+                       family = "gaussian",
+                       alpha = 1,
+                       lambda = 10^(seq(-2, 5, by = 0.25)))
+
+plot(mlr.lasso)
+
+mlr.lasso.mod <- glmnet(x = trainXmat[, -1],
+                        y = train$price,
+                        family = "gaussian",
+                        lambda = mlr.lasso$lambda.1se,
+                        alpha = 1)
+```
+
+Use the following coefficient output to compare ridge and lasso. Ridge typically shrinks coefficients toward zero but does not set them exactly equal to zero, while lasso can set some coefficients exactly equal to zero.
+
+```{r ridge-lasso-coefficients}
+cat("Lasso alpha:\n")
+1
+
+cat("Ridge coefficients at lambda.1se:\n")
+coef(mlr.ridge.mod)
+
+cat("Lasso coefficients at lambda.1se:\n")
+coef(mlr.lasso.mod)
+
+cat("Nonzero lasso coefficients at lambda.1se:\n")
+coef_lasso <- as.matrix(coef(mlr.lasso.mod))
+coef_lasso[coef_lasso[, 1] != 0, , drop = FALSE]
+```
+
+# Exercise 2.5: RMSE Comparison of MLR, Stepwise, Ridge, and Lasso Models
+
+The code below computes training and test RMSEs for the full MLR, AIC stepwise MLR, BIC stepwise MLR, ridge, and lasso models. For a prediction-focused recommendation, focus primarily on test RMSE. Training RMSE is still useful for discussing in-sample fit and possible overfitting.
+
+```{r rmse-comparison}
+mlr.full.train.preds <- predict(mlr.full, newdata = train)
+mlr.full.test.preds  <- predict(mlr.full, newdata = test)
+
+mlr.step.aic.train.preds <- predict(mlr.step.aic, newdata = train)
+mlr.step.aic.test.preds  <- predict(mlr.step.aic, newdata = test)
+
+mlr.step.bic.train.preds <- predict(mlr.step.bic, newdata = train)
+mlr.step.bic.test.preds  <- predict(mlr.step.bic, newdata = test)
+
+mlr.ridge.train.preds <- as.numeric(predict(mlr.ridge.mod, newx = trainXmat[, -1]))
+mlr.ridge.test.preds  <- as.numeric(predict(mlr.ridge.mod, newx = testXmat[, -1]))
+
+mlr.lasso.train.preds <- as.numeric(predict(mlr.lasso.mod, newx = trainXmat[, -1]))
+mlr.lasso.test.preds  <- as.numeric(predict(mlr.lasso.mod, newx = testXmat[, -1]))
+
+model_rmse_table <- data.frame(
+  Model = c("Full MLR", "Stepwise MLR - AIC", "Stepwise MLR - BIC", "Ridge", "Lasso"),
+  Training_RMSE = c(
+    rmse(train$price, mlr.full.train.preds),
+    rmse(train$price, mlr.step.aic.train.preds),
+    rmse(train$price, mlr.step.bic.train.preds),
+    rmse(train$price, mlr.ridge.train.preds),
+    rmse(train$price, mlr.lasso.train.preds)
+  ),
+  Test_RMSE = c(
+    rmse(test$price, mlr.full.test.preds),
+    rmse(test$price, mlr.step.aic.test.preds),
+    rmse(test$price, mlr.step.bic.test.preds),
+    rmse(test$price, mlr.ridge.test.preds),
+    rmse(test$price, mlr.lasso.test.preds)
+  )
+)
+
+model_rmse_table
+```
+
+# Exercise 2.6: Numerical Summary and Histogram of Price
+
+Use the following code to summarize and visualize the price distribution.
+
+```{r price-summary-histogram}
+summary(moissanite$price)
+sd(moissanite$price)
+
+hist(moissanite$price,
+     breaks = 40,
+     main = "Histogram of Moissanite Price",
+     xlab = "Price",
+     col = "gray")
+```
+
+# Exercise 2.7: Gamma GLM vs Full MLR
+
+Model 1 is a Gamma GLM with log link using the same predictor set as the full MLR model:
+
+`glm(price ~ ., data = train, family = Gamma(link = "log"))`
+
+Model 2 is the full MLR model from Exercise 2.1:
+
+`lm(price ~ ., data = train)`
+
+AIC is computed from the model fitted on the training data. RMSE is computed on the original `price` scale. For the Gamma GLM, use `type = "response"` so predictions are returned on the price scale. For a prediction-focused recommendation, test RMSE should be the primary criterion; AIC is a likelihood-based in-sample model comparison criterion and may not always agree with test RMSE.
+
+```{r gamma-glm-vs-full-mlr}
+# Numerical-stability step for the Gamma GLM:
+# center and scale the continuous predictors using the training data only.
+# This does not change the substantive predictor set; it only improves glm()
+# convergence for the Gamma(log) fit.
+numeric_predictors_q7 <- c("carat", "depth", "table", "x", "y", "z")
+
+train_q7 <- train
+test_q7  <- test
+
+center_q7 <- sapply(train_q7[, numeric_predictors_q7], mean)
+scale_q7  <- sapply(train_q7[, numeric_predictors_q7], sd)
+
+train_q7_scaled <- train_q7
+test_q7_scaled  <- test_q7
+
+train_q7_scaled[, numeric_predictors_q7] <- as.data.frame(
+  scale(train_q7[, numeric_predictors_q7], center = center_q7, scale = scale_q7)
+)
+
+test_q7_scaled[, numeric_predictors_q7] <- as.data.frame(
+  scale(test_q7[, numeric_predictors_q7], center = center_q7, scale = scale_q7)
+)
+
+# Use a log-linear fit to provide stable starting values for Gamma(log).
+log_start_q7 <- lm(log(price) ~ ., data = train_q7_scaled)
+eta_start_q7 <- predict(log_start_q7, newdata = train_q7_scaled)
+eta_start_q7 <- pmin(
+  pmax(eta_start_q7, log(min(train_q7_scaled$price) / 10)),
+  log(max(train_q7_scaled$price) * 10)
+)
+
+glm.gamma <- glm(price ~ ., data = train_q7_scaled,
+                 family = Gamma(link = "log"),
+                 etastart = eta_start_q7,
+                 control = glm.control(maxit = 100, epsilon = 1e-8))
+
+# Refit the full MLR on the same scaled training data used for Model 1.
+# For linear regression, centering/scaling predictors does not change predictions;
+# it simply keeps the comparison on the same design matrix as the Gamma GLM.
+mlr.full.q7 <- lm(price ~ ., data = train_q7_scaled)
+
+summary(glm.gamma)
+summary(mlr.full.q7)
+
+# Predictions on original price scale.
+glm.gamma.train.preds <- predict(glm.gamma, newdata = train_q7_scaled, type = "response")
+glm.gamma.test.preds  <- predict(glm.gamma, newdata = test_q7_scaled, type = "response")
+
+mlr.full.train.preds <- predict(mlr.full.q7, newdata = train_q7_scaled)
+mlr.full.test.preds  <- predict(mlr.full.q7, newdata = test_q7_scaled)
+
+model_1_2_table <- data.frame(
+  Model = c("Model 1: Gamma GLM with log link", "Model 2: Full MLR"),
+  Training_RMSE = c(
+    rmse(train_q7_scaled$price, glm.gamma.train.preds),
+    rmse(train_q7_scaled$price, mlr.full.train.preds)
+  ),
+  Test_RMSE = c(
+    rmse(test_q7_scaled$price, glm.gamma.test.preds),
+    rmse(test_q7_scaled$price, mlr.full.test.preds)
+  ),
+  AIC = c(
+    AIC(glm.gamma),
+    AIC(mlr.full.q7)
+  )
+)
+
+model_1_2_table
+```
